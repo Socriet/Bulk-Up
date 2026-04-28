@@ -2,17 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'database_helper.dart';
 import 'screens/dashboard_screen.dart';
-import 'screens/log_workout_screen.dart';
+import 'screens/routines_screen.dart';
 import 'screens/history_screen.dart';
 
 void main() async {
-  // Ensure Flutter bindings are initialized before running the app
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Boot up the local database
   await Hive.initFlutter();
   await DatabaseHelper.instance.database;
-  
   runApp(const BulkUpApp());
 }
 
@@ -23,7 +19,7 @@ class BulkUpApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Bulk Up',
-      debugShowCheckedModeBanner: false, // Removes the debug banner
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF121212),
@@ -54,38 +50,35 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _screens = const [
     DashboardScreen(),
-    LogWorkoutScreen(),
+    RoutinesScreen(),
     HistoryScreen(),
+  ];
+
+  final List<String> _titles = const [
+    'Bulk Up',
+    'Routines',
+    'History',
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bulk Up', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(_titles[_currentIndex],
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: (i) => setState(() => _currentIndex = i),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Dashboard',
-          ),
+              icon: Icon(Icons.home), label: 'Dashboard'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: 'Log',
-          ),
+              icon: Icon(Icons.list_alt), label: 'Routines'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'History',
-          ),
+              icon: Icon(Icons.history), label: 'History'),
         ],
       ),
     );
