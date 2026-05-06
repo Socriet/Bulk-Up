@@ -1,7 +1,62 @@
 import 'package:flutter/material.dart';
+import '../database_helper.dart';
 
-class HatchScreen extends StatelessWidget {
+class HatchScreen extends StatefulWidget {
   const HatchScreen({super.key});
+
+  @override
+  State<HatchScreen> createState() => _HatchScreenState();
+}
+
+class _HatchScreenState extends State<HatchScreen> {
+  bool _isHatching = false;
+
+  Future<void> _hatchEgg() async {
+    setState(() => _isHatching = true);
+    
+    await Future.delayed(const Duration(milliseconds: 600));
+    final hatchedName = await DatabaseHelper.instance.hatchPartner();
+    
+    if (mounted) {
+      setState(() => _isHatching = false);
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1F1F1F),
+          title: const Text('Egg Hatched! 🥚✨', textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/${hatchedName.toLowerCase()}.gif', 
+                height: 120, 
+                errorBuilder: (c, e, s) => const Icon(Icons.pets, size: 80, color: Colors.greenAccent)
+              ),
+              const SizedBox(height: 16),
+              Text('You hatched a $hatchedName!', 
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('Check your Pokédex to set them as your active partner.', 
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.grey)),
+            ],
+          ),
+          actions: [
+            Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.greenAccent.shade700,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Awesome', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            )
+          ],
+        )
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -10,7 +65,6 @@ class HatchScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           const Text(
             'Hatch an Egg',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -21,8 +75,6 @@ class HatchScreen extends StatelessWidget {
             style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
           const SizedBox(height: 28),
-
-          // Egg display
           Center(
             child: Column(
               children: [
@@ -37,8 +89,10 @@ class HatchScreen extends StatelessWidget {
                       width: 2,
                     ),
                   ),
-                  child: const Center(
-                    child: Text('🥚', style: TextStyle(fontSize: 72)),
+                  child: Center(
+                    child: _isHatching 
+                      ? const CircularProgressIndicator(color: Colors.greenAccent)
+                      : const Text('🥚', style: TextStyle(fontSize: 72)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -56,73 +110,25 @@ class HatchScreen extends StatelessWidget {
           ),
           const SizedBox(height: 28),
 
-          // Egg progress bar (placeholder)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1F1F1F),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Hatch Progress',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      '0 / 500 XP',
-                      style: TextStyle(
-                          color: Colors.grey.shade400, fontSize: 13),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: 0,
-                    minHeight: 12,
-                    backgroundColor: Colors.grey.shade800,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.greenAccent),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Earn XP by completing exercises to hatch your egg.',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Hatch button (disabled for now)
           SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade800,
-                foregroundColor: Colors.grey,
+                backgroundColor: Colors.greenAccent.shade700,
+                foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: null,
-              icon: const Text('🥚', style: TextStyle(fontSize: 20)),
+              onPressed: _isHatching ? null : _hatchEgg,
+              icon: const Icon(Icons.egg),
               label: const Text(
-                'NOT READY YET',
+                'OPEN LOOTBOX (TEST)',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
           ),
           const SizedBox(height: 28),
-
-          // Coming soon section
           const Text(
             'HOW IT WORKS',
             style: TextStyle(

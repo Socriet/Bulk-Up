@@ -154,7 +154,6 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
             )
           : Column(
               children: [
-               
                 if (_doneThisSession.isNotEmpty)
                   _SessionProgress(
                     done: _doneThisSession.length,

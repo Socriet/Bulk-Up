@@ -3,7 +3,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'database_helper.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/routines_screen.dart';
-import 'screens/history_screen.dart';
+import 'screens/hatch_screen.dart';
+import 'screens/pokedex_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,34 +52,49 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = const [
     DashboardScreen(),
     RoutinesScreen(),
-    HistoryScreen(),
+    HatchScreen(),
+    PokedexScreen(),
   ];
 
   final List<String> _titles = const [
     'Bulk Up',
     'Routines',
-    'History',
+    'Hatch',
+    'Pokédex',
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_currentIndex],
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          _titles[_currentIndex],
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
-              icon: Icon(Icons.home), label: 'Dashboard'),
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.list_alt), label: 'Routines'),
+            icon: Icon(Icons.fitness_center),
+            label: 'Routines',
+          ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.history), label: 'History'),
+            icon: Icon(Icons.egg_outlined),
+            label: 'Hatch',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book_outlined),
+            label: 'Pokédex',
+          ),
         ],
       ),
     );

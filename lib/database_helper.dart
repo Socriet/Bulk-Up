@@ -1,4 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter/services.dart';
+import 'dart:math';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -20,6 +22,14 @@ class DatabaseHelper {
     }
     if (!_box!.containsKey('routines')) {
       await _box!.put('routines', []);
+    }
+    
+   
+    if (!_box!.containsKey('partners')) {
+      await _box!.put('partners', {});
+    }
+    if (!_box!.containsKey('active_partner')) {
+      await _box!.put('active_partner', '');
     }
 
     return _box!;
@@ -53,7 +63,60 @@ class DatabaseHelper {
       'date': DateTime.now().toIso8601String(),
     });
     await db.put('workouts', workouts);
+    final active = db.get('active_partner') as String? ?? '';
+    if (active.isNotEmpty) {
+      final partners = Map<dynamic, dynamic>.from(db.get('partners') ?? {});
+      if (partners.containsKey(active)) {
+        final pData = Map<dynamic, dynamic>.from(partners[active]);
+        int pExp = pData['exp'] + xp;
+        int pLevel = pData['level'];
+      
+        while (pExp >= pLevel * 100) {
+          pExp -= pLevel * 100;
+          pLevel++;
+        }
+        
+        pData['exp'] = pExp;
+        pData['level'] = pLevel;
+        partners[active] = pData;
+        await db.put('partners', partners);
+      }
+    }
   }
+
+  Future<String> hatchPartner() async {
+    final db = await database;
+    final partners = Map<dynamic, dynamic>.from(db.get('partners') ?? {});
+    final AssetManifest assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    final List<String> allAssets = assetManifest.listAssets();
+    final availableAssets = allAssets
+        .where((String key) => key.startsWith('assets/') && key.endsWith('.gif'))
+        .toList();
+    if (availableAssets.isEmpty) {
+      return 'Unknown';
+    }
+
+    final randomPath = availableAssets[Random().nextInt(availableAssets.length)];
+    final rawName = randomPath.split('/').last.replaceAll('.gif', '');
+    final formattedName = rawName[0].toUpperCase() + rawName.substring(1);
+    
+    if (!partners.containsKey(formattedName)) {
+      partners[formattedName] = {
+        'exp': 0,
+        'level': 1,
+        'image': randomPath 
+      };
+      await db.put('partners', partners);
+    }
+    
+    return formattedName;
+  }
+
+  Future<void> setActivePartner(String name) async {
+    final db = await database;
+    await db.put('active_partner', name);
+  }
+
 
   Future<List<Map<dynamic, dynamic>>> getRoutines() async {
     final db = await database;

@@ -27,7 +27,6 @@ class _PokedexScreenState extends State<PokedexScreen>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Tab bar: My Pokémon / All Pokémon
         Container(
           color: const Color(0xFF1F1F1F),
           child: TabBar(
@@ -56,7 +55,6 @@ class _PokedexScreenState extends State<PokedexScreen>
   }
 }
 
-// ── My Pokémon tab ────────────────────────────────────────────────────────────
 
 class _MyPokemonTab extends StatelessWidget {
   const _MyPokemonTab();
@@ -83,7 +81,6 @@ class _MyPokemonTab extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Partner selector placeholder
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -141,12 +138,11 @@ class _MyPokemonTab extends StatelessWidget {
   }
 }
 
-// ── Catalog tab ───────────────────────────────────────────────────────────────
 
 class _CatalogTab extends StatelessWidget {
   const _CatalogTab();
 
-  // Placeholder Pokémon slots — locked until hatched
+
   static const int _totalSlots = 12;
 
   @override
