@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../database_helper.dart';
 
 class HatchScreen extends StatefulWidget {
@@ -10,8 +11,44 @@ class HatchScreen extends StatefulWidget {
 
 class _HatchScreenState extends State<HatchScreen> {
   bool _isHatching = false;
+  int _availablePulls = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final db = await DatabaseHelper.instance.database;
+    db.listenable().addListener(_onDbChange);
+    _read(db);
+  }
+
+  void _onDbChange() async {
+    final db = await DatabaseHelper.instance.database;
+    _read(db);
+  }
+
+  void _read(Box db) {
+    final m = Map<dynamic, dynamic>.from(db.get('user_stats') ?? {});
+    if (mounted) {
+      setState(() {
+        _availablePulls = m['available_pulls'] ?? 0;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    DatabaseHelper.instance.database
+        .then((db) => db.listenable().removeListener(_onDbChange));
+    super.dispose();
+  }
 
   Future<void> _hatchEgg() async {
+    if (_availablePulls <= 0) return;
+    
     setState(() => _isHatching = true);
     
     await Future.delayed(const Duration(milliseconds: 600));
@@ -19,6 +56,37 @@ class _HatchScreenState extends State<HatchScreen> {
     
     if (mounted) {
       setState(() => _isHatching = false);
+
+      if (hatchedName == 'NO_PULLS') return;
+
+      if (hatchedName == 'ALL_UNLOCKED') {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF1F1F1F),
+            title: const Text('Pokédex Complete! 🏆', textAlign: TextAlign.center),
+            content: const Text(
+              'Incredible work! You have hatched every single Pokémon currently available.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+            actions: [
+              Center(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.greenAccent.shade700,
+                    foregroundColor: Colors.black,
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              )
+            ],
+          )
+        );
+        return;
+      }
+
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -71,7 +139,7 @@ class _HatchScreenState extends State<HatchScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Complete workouts to fill your egg meter and hatch a new Pokémon.',
+            'Use your available pulls to open an egg.',
             style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
           const SizedBox(height: 28),
@@ -85,46 +153,45 @@ class _HatchScreenState extends State<HatchScreen> {
                     color: const Color(0xFF1F1F1F),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: Colors.greenAccent.withOpacity(0.4),
+                      color: _availablePulls > 0 ? Colors.greenAccent : Colors.grey.shade800,
                       width: 2,
                     ),
                   ),
                   child: Center(
                     child: _isHatching 
                       ? const CircularProgressIndicator(color: Colors.greenAccent)
-                      : const Text('🥚', style: TextStyle(fontSize: 72)),
+                      : Text('$_availablePulls', style: TextStyle(fontSize: 64, color: _availablePulls > 0 ? Colors.white : Colors.grey.shade700)),
                   ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Mystery Egg',
+                  'Available Pulls',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Who could be inside?',
+                  'Complete workouts to level up!',
                   style: TextStyle(color: Colors.grey, fontSize: 13),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 28),
-
           SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.greenAccent.shade700,
-                foregroundColor: Colors.black,
+                backgroundColor: _availablePulls > 0 ? Colors.greenAccent.shade700 : Colors.grey.shade800,
+                foregroundColor: _availablePulls > 0 ? Colors.black : Colors.grey,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: _isHatching ? null : _hatchEgg,
+              onPressed: (_isHatching || _availablePulls <= 0) ? null : _hatchEgg,
               icon: const Icon(Icons.egg),
-              label: const Text(
-                'OPEN LOOTBOX (TEST)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              label: Text(
+                _availablePulls > 0 ? 'OPEN LOOTBOX (1 PULL)' : 'NOT ENOUGH PULLS',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
           ),
@@ -135,19 +202,20 @@ class _HatchScreenState extends State<HatchScreen> {
                 color: Colors.grey, fontSize: 12, letterSpacing: 1.5),
           ),
           const SizedBox(height: 12),
-          _InfoTile(
-            icon: '💪',
-            title: 'Complete exercises',
-            subtitle: 'Every Done tap fills your egg meter with XP.',
+          // Replaced the text exactly as requested
+          const _InfoTile(
+            icon: '🆙',
+            title: 'Level Up',
+            subtitle: 'Every time you level up you get the option to open an egg.',
           ),
           const SizedBox(height: 8),
-          _InfoTile(
+          const _InfoTile(
             icon: '🎲',
             title: 'Random hatch',
-            subtitle: 'When the meter is full, a random Pokémon hatches.',
+            subtitle: 'Spend a pull to hatch a random Pokémon.',
           ),
           const SizedBox(height: 8),
-          _InfoTile(
+          const _InfoTile(
             icon: '📖',
             title: 'Collect them all',
             subtitle: 'Hatched Pokémon appear in your Pokédex.',

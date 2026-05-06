@@ -13,6 +13,7 @@ class RoutineDetailScreen extends StatefulWidget {
 
 class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
   late Routine _routine;
+  // Tracks which exercises have been marked done this session
   final Set<String> _doneThisSession = {};
 
   @override
@@ -21,6 +22,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     _routine = widget.routine;
   }
 
+  // Reload the routine from Hive so edits persist correctly
   Future<void> _reload() async {
     final all = await DatabaseHelper.instance.getRoutines();
     final updated = all.firstWhere(
@@ -154,6 +156,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
             )
           : Column(
               children: [
+                // Progress indicator when session is active
                 if (_doneThisSession.isNotEmpty)
                   _SessionProgress(
                     done: _doneThisSession.length,
@@ -189,6 +192,8 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     );
   }
 }
+
+// ── Session progress banner ───────────────────────────────────────────────────
 
 class _SessionProgress extends StatelessWidget {
   final int done;
@@ -241,6 +246,8 @@ class _SessionProgress extends StatelessWidget {
   }
 }
 
+// ── Exercise tile ─────────────────────────────────────────────────────────────
+
 class _ExerciseTile extends StatelessWidget {
   final Exercise exercise;
   final bool isDone;
@@ -272,6 +279,7 @@ class _ExerciseTile extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Exercise info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,8 +321,10 @@ class _ExerciseTile extends StatelessWidget {
             ),
             const SizedBox(width: 8),
 
+            // Action buttons
             Column(
               children: [
+                // Done button
                 SizedBox(
                   height: 36,
                   child: ElevatedButton(
@@ -337,6 +347,7 @@ class _ExerciseTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
+                // Edit / Delete row
                 Row(
                   children: [
                     GestureDetector(
@@ -360,6 +371,8 @@ class _ExerciseTile extends StatelessWidget {
     );
   }
 }
+
+// ── Add / Edit exercise dialog ─────────────────────────────────────────────────
 
 class _ExerciseDialog extends StatefulWidget {
   final Exercise? initial;
@@ -443,6 +456,7 @@ class _ExerciseDialogState extends State<_ExerciseDialog> {
                 ],
               ),
               const SizedBox(height: 12),
+              // Live XP preview
               _DialogXpPreview(
                 setsCtrl: _sets,
                 repsCtrl: _reps,

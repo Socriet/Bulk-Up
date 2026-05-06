@@ -12,9 +12,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _totalXp = 0;
   int _level = 1;
+  double _totalVolume = 0;
+  String _activePartner = '';
+  Map<dynamic, dynamic> _partnerData = {};
   bool _loading = true;
-
-  static const List<int> _levelThresholds = [0, 1000, 3000, 6000, 10000, 15000];
 
   @override
   void initState() {
@@ -36,10 +37,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _read(Box db) {
     final m = Map<dynamic, dynamic>.from(
         db.get('user_stats') ?? {'total_xp': 0, 'level': 1});
+        
+    final active = db.get('active_partner') as String? ?? '';
+    final partners = Map<dynamic, dynamic>.from(db.get('partners') ?? {});
+    
+    // Calculate Total Volume from history
+    final workouts = List<dynamic>.from(db.get('workouts') ?? []);
+    double vol = 0;
+    for(var w in workouts) {
+      vol += (w['volume'] as num? ?? 0).toDouble();
+    }
+
     if (mounted) {
       setState(() {
         _totalXp = m['total_xp'] as int;
         _level = m['level'] as int;
+        _totalVolume = vol;
+        _activePartner = active;
+        if (active.isNotEmpty && partners.containsKey(active)) {
+          _partnerData = Map<dynamic, dynamic>.from(partners[active]);
+        } else {
+          _partnerData = {};
+        }
         _loading = false;
       });
     }
@@ -52,20 +71,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  int get _xpForCurrentLevel =>
-      _level <= 1 ? 0 : _levelThresholds[_level - 1];
-
-  int get _xpForNextLevel => _level < _levelThresholds.length
-      ? _levelThresholds[_level]
-      : _levelThresholds.last + 5000;
-
-  double get _levelProgress {
-    final range = _xpForNextLevel - _xpForCurrentLevel;
-    final earned = _totalXp - _xpForCurrentLevel;
-    return (earned / range).clamp(0.0, 1.0);
+  // --- TRAINER LEVEL MATH HELPERS ---
+  int _getTrainerBaseXp(int level) {
+    const thresholds = [0, 1000, 3000, 6000, 10000, 15000];
+    if (level <= 6) return thresholds[level - 1];
+    return 15000 + ((level - 6) * 5000);
   }
 
-  int get _xpToNextLevel => _xpForNextLevel - _totalXp;
+  int _getTrainerNextLevelXp(int level) {
+    const thresholds = [0, 1000, 3000, 6000, 10000, 15000];
+    if (level < 6) return thresholds[level];
+    return 15000 + ((level - 5) * 5000);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,27 +91,109 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: CircularProgressIndicator(color: Colors.greenAccent));
     }
 
+    // Partner EXP Math
+    final pLevel = _partnerData['level'] as int? ?? 1;
+    final pExp = _partnerData['exp'] as int? ?? 0;
+    final pNext = pLevel * 100;
+    final pProgress = (pExp / pNext).clamp(0.0, 1.0);
+    final pToNext = pNext - pExp;
+
+    // Trainer EXP Math
+    final tBase = _getTrainerBaseXp(_level);
+    final tNext = _getTrainerNextLevelXp(_level);
+    final tCurrent = _totalXp - tBase;
+    final tRange = tNext - tBase;
+    final tProgress = (tCurrent / tRange).clamp(0.0, 1.0);
+    final tToNext = tNext - _totalXp;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Icon(Icons.pets, size: 100, color: Colors.greenAccent),
-          const SizedBox(height: 16),
-          Text('Level $_level',
-              style: const TextStyle(
-                  fontSize: 28, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          Text('$_totalXp XP total',
-              style: const TextStyle(fontSize: 14, color: Colors.grey)),
+          
+          // Partner Display Area
+          if (_activePartner.isNotEmpty) ...[
+            Image.asset(
+              _partnerData['image'], 
+              width: 150, 
+              height: 150,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.pets, size: 100, color: Colors.greenAccent),
+            ),
+            const SizedBox(height: 16),
+            Text(_activePartner,
+                style: const TextStyle(
+                    fontSize: 28, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text('Partner Level $pLevel',
+                style: const TextStyle(fontSize: 16, color: Colors.greenAccent)),
+          ] else ...[
+            const Icon(Icons.pets, size: 100, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text('No Partner Selected',
+                style: TextStyle(
+                    fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey)),
+            const SizedBox(height: 6),
+            const Text('Hatch an egg and set a partner to begin!',
+                style: TextStyle(fontSize: 14, color: Colors.grey)),
+          ],
+          
           const SizedBox(height: 24),
 
+          // --- PARTNER EXP BAR ---
+          if (_activePartner.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F1F1F),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Partner Lv. $pLevel',
+                          style: const TextStyle(
+                              color: Colors.greenAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13)),
+                      Text('Lv. ${pLevel + 1}',
+                          style: const TextStyle(
+                              color: Colors.grey, fontSize: 13)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: pProgress,
+                      minHeight: 14,
+                      backgroundColor: Colors.grey.shade800,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Colors.greenAccent),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('$pToNext XP to next level',
+                      style: const TextStyle(
+                          color: Colors.grey, fontSize: 12)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+            
+          // --- TRAINER EXP BAR ---
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: const Color(0xFF1F1F1F),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)), 
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,12 +201,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Level $_level',
+                    Text('Trainer Lv. $_level',
                         style: const TextStyle(
-                            color: Colors.greenAccent,
+                            color: Colors.orangeAccent,
                             fontWeight: FontWeight.bold,
                             fontSize: 13)),
-                    Text('Level ${_level + 1}',
+                    Text('Lv. ${_level + 1}',
                         style: const TextStyle(
                             color: Colors.grey, fontSize: 13)),
                   ],
@@ -116,36 +215,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
-                    value: _levelProgress,
+                    value: tProgress,
                     minHeight: 14,
                     backgroundColor: Colors.grey.shade800,
                     valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.greenAccent),
+                        Colors.orangeAccent),
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text('$_xpToNextLevel XP to next level',
-                    style: const TextStyle(
-                        color: Colors.grey, fontSize: 12)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('$_totalXp Total XP',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text('$tToNext XP to level up',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
               ],
             ),
           ),
+
           const SizedBox(height: 20),
 
-          Row(
-            children: [
-              Expanded(
-                  child: _StatBox(
-                      label: 'Total XP',
-                      value: '$_totalXp',
-                      color: Colors.greenAccent)),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _StatBox(
-                      label: 'Level',
-                      value: '$_level',
-                      color: Colors.orangeAccent)),
-            ],
+          // --- FULL WIDTH KG LIFTED STAT ---
+          SizedBox(
+            width: double.infinity,
+            child: _StatBox(
+                label: 'Total KG Lifted',
+                value: '${_totalVolume.toStringAsFixed(0)}',
+                color: Colors.greenAccent),
           ),
         ],
       ),
@@ -163,7 +262,7 @@ class _StatBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
         color: const Color(0xFF1F1F1F),
         borderRadius: BorderRadius.circular(12),
@@ -172,13 +271,13 @@ class _StatBox extends StatelessWidget {
         children: [
           Text(value,
               style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 28, // Made slightly larger to pop out more
                   fontWeight: FontWeight.bold,
                   color: color)),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(label,
               style:
-                  const TextStyle(color: Colors.grey, fontSize: 13)),
+                  const TextStyle(color: Colors.grey, fontSize: 14)),
         ],
       ),
     );
