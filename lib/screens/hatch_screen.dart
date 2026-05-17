@@ -202,7 +202,6 @@ class _HatchScreenState extends State<HatchScreen> {
                 color: Colors.grey, fontSize: 12, letterSpacing: 1.5),
           ),
           const SizedBox(height: 12),
-          // Replaced the text exactly as requested
           const _InfoTile(
             icon: '🆙',
             title: 'Level Up',

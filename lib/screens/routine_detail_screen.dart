@@ -2,27 +2,25 @@ import 'package:flutter/material.dart';
 import '../database_helper.dart';
 import '../models/routine.dart';
 import '../models/exercise.dart';
-
+ 
 class RoutineDetailScreen extends StatefulWidget {
   final Routine routine;
   const RoutineDetailScreen({super.key, required this.routine});
-
+ 
   @override
   State<RoutineDetailScreen> createState() => _RoutineDetailScreenState();
 }
-
+ 
 class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
   late Routine _routine;
-  // Tracks which exercises have been marked done this session
   final Set<String> _doneThisSession = {};
-
+ 
   @override
   void initState() {
     super.initState();
     _routine = widget.routine;
   }
-
-  // Reload the routine from Hive so edits persist correctly
+ 
   Future<void> _reload() async {
     final all = await DatabaseHelper.instance.getRoutines();
     final updated = all.firstWhere(
@@ -31,16 +29,26 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     );
     if (mounted) setState(() => _routine = Routine.fromMap(updated));
   }
-
+ 
   Future<void> _markDone(Exercise exercise) async {
-    await DatabaseHelper.instance.addXP(
+    final evolutionResult = await DatabaseHelper.instance.addXP(
       exercise.xpValue,
       exercise.name,
       exercise.volume,
     );
+    
     setState(() => _doneThisSession.add(exercise.id));
-
+ 
     if (!mounted) return;
+ 
+    if (evolutionResult['hasEvolved'] == true) {
+      _showEvolutionDialog(
+        oldName: evolutionResult['oldName'] as String,
+        newName: evolutionResult['newName'] as String,
+        newLevel: evolutionResult['newLevel'] as int,
+      );
+    }
+ 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${exercise.name} done! +${exercise.xpValue} XP 💪'),
@@ -50,18 +58,84 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
       ),
     );
   }
-
+ 
+  void _showEvolutionDialog({
+    required String oldName,
+    required String newName,
+    required int newLevel,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1F1F1F),
+        title: const Text('🎉 EVOLUTION! 🎉', textAlign: TextAlign.center),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Column(
+              children: [
+                Image.asset(
+                  'assets/${oldName.toLowerCase()}.gif',
+                  height: 80,
+                  errorBuilder: (c, e, s) => const Icon(Icons.pets, size: 80, color: Colors.grey),
+                ),
+                Text(oldName,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey)),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Icon(Icons.arrow_downward, size: 32, color: Colors.greenAccent),
+            const SizedBox(height: 20),
+            Column(
+              children: [
+                Image.asset(
+                  'assets/${newName.toLowerCase()}.gif',
+                  height: 100,
+                  errorBuilder: (c, e, s) => const Icon(Icons.pets, size: 100, color: Colors.greenAccent),
+                ),
+                const SizedBox(height: 8),
+                Text(newName,
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.greenAccent)),
+                const SizedBox(height: 4),
+                Text('Level $newLevel',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey)),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+        actions: [
+          Center(
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.greenAccent.shade700,
+                foregroundColor: Colors.black,
+              ),
+              onPressed: () => Navigator.pop(ctx),
+              icon: const Icon(Icons.favorite),
+              label: const Text('Amazing!', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+ 
   Future<void> _addExercise() async {
     final result = await showDialog<Exercise>(
       context: context,
       builder: (_) => const _ExerciseDialog(),
     );
     if (result == null) return;
-
+ 
     final all = await DatabaseHelper.instance.getRoutines();
     final idx = all.indexWhere((r) => r['id'] == _routine.id);
     if (idx == -1) return;
-
+ 
     final exercises = List<Map<dynamic, dynamic>>.from(
         all[idx]['exercises'] as List);
     exercises.add(result.toMap());
@@ -70,18 +144,18 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     await DatabaseHelper.instance.saveRoutines(all);
     await _reload();
   }
-
+ 
   Future<void> _editExercise(Exercise exercise) async {
     final result = await showDialog<Exercise>(
       context: context,
       builder: (_) => _ExerciseDialog(initial: exercise),
     );
     if (result == null) return;
-
+ 
     final all = await DatabaseHelper.instance.getRoutines();
     final idx = all.indexWhere((r) => r['id'] == _routine.id);
     if (idx == -1) return;
-
+ 
     final exercises = List<Map<dynamic, dynamic>>.from(
         all[idx]['exercises'] as List);
     final eIdx = exercises.indexWhere((e) => e['id'] == exercise.id);
@@ -91,12 +165,12 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     await DatabaseHelper.instance.saveRoutines(all);
     await _reload();
   }
-
+ 
   Future<void> _deleteExercise(Exercise exercise) async {
     final all = await DatabaseHelper.instance.getRoutines();
     final idx = all.indexWhere((r) => r['id'] == _routine.id);
     if (idx == -1) return;
-
+ 
     final exercises = List<Map<dynamic, dynamic>>.from(
         all[idx]['exercises'] as List);
     exercises.removeWhere((e) => e['id'] == exercise.id);
@@ -105,7 +179,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     await DatabaseHelper.instance.saveRoutines(all);
     await _reload();
   }
-
+ 
   void _resetSession() {
     setState(() => _doneThisSession.clear());
     ScaffoldMessenger.of(context).showSnackBar(
@@ -115,7 +189,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
       ),
     );
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     final exercises = _routine.exercises
@@ -123,7 +197,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
         .toList();
     final allDone = exercises.isNotEmpty &&
         exercises.every((e) => _doneThisSession.contains(e.id));
-
+ 
     return Scaffold(
       appBar: AppBar(
         title: Text(_routine.name,
@@ -156,7 +230,6 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
             )
           : Column(
               children: [
-                // Progress indicator when session is active
                 if (_doneThisSession.isNotEmpty)
                   _SessionProgress(
                     done: _doneThisSession.length,
@@ -192,20 +265,19 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     );
   }
 }
-
-// ── Session progress banner ───────────────────────────────────────────────────
-
+ 
+ 
 class _SessionProgress extends StatelessWidget {
   final int done;
   final int total;
   final bool allDone;
-
+ 
   const _SessionProgress({
     required this.done,
     required this.total,
     required this.allDone,
   });
-
+ 
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -245,16 +317,15 @@ class _SessionProgress extends StatelessWidget {
     );
   }
 }
-
-// ── Exercise tile ─────────────────────────────────────────────────────────────
-
+ 
+ 
 class _ExerciseTile extends StatelessWidget {
   final Exercise exercise;
   final bool isDone;
   final VoidCallback? onDone;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-
+ 
   const _ExerciseTile({
     required this.exercise,
     required this.isDone,
@@ -262,7 +333,7 @@ class _ExerciseTile extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
   });
-
+ 
   @override
   Widget build(BuildContext context) {
     return AnimatedOpacity(
@@ -279,7 +350,6 @@ class _ExerciseTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Exercise info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,11 +390,10 @@ class _ExerciseTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-
-            // Action buttons
+ 
+        
             Column(
               children: [
-                // Done button
                 SizedBox(
                   height: 36,
                   child: ElevatedButton(
@@ -347,7 +416,6 @@ class _ExerciseTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                // Edit / Delete row
                 Row(
                   children: [
                     GestureDetector(
@@ -371,24 +439,23 @@ class _ExerciseTile extends StatelessWidget {
     );
   }
 }
-
-// ── Add / Edit exercise dialog ─────────────────────────────────────────────────
-
+ 
+ 
 class _ExerciseDialog extends StatefulWidget {
   final Exercise? initial;
   const _ExerciseDialog({this.initial});
-
+ 
   @override
   State<_ExerciseDialog> createState() => _ExerciseDialogState();
 }
-
+ 
 class _ExerciseDialogState extends State<_ExerciseDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
   late final TextEditingController _sets;
   late final TextEditingController _reps;
   late final TextEditingController _weight;
-
+ 
   @override
   void initState() {
     super.initState();
@@ -400,7 +467,7 @@ class _ExerciseDialogState extends State<_ExerciseDialog> {
     _weight = TextEditingController(
         text: widget.initial?.weight.toString() ?? '20');
   }
-
+ 
   @override
   void dispose() {
     _name.dispose();
@@ -409,7 +476,7 @@ class _ExerciseDialogState extends State<_ExerciseDialog> {
     _weight.dispose();
     super.dispose();
   }
-
+ 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
     final exercise = Exercise(
@@ -422,7 +489,7 @@ class _ExerciseDialogState extends State<_ExerciseDialog> {
     );
     Navigator.pop(context, exercise);
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -456,7 +523,6 @@ class _ExerciseDialogState extends State<_ExerciseDialog> {
                 ],
               ),
               const SizedBox(height: 12),
-              // Live XP preview
               _DialogXpPreview(
                 setsCtrl: _sets,
                 repsCtrl: _reps,
@@ -483,22 +549,22 @@ class _ExerciseDialogState extends State<_ExerciseDialog> {
     );
   }
 }
-
+ 
 class _DialogXpPreview extends StatefulWidget {
   final TextEditingController setsCtrl;
   final TextEditingController repsCtrl;
   final TextEditingController weightCtrl;
-
+ 
   const _DialogXpPreview({
     required this.setsCtrl,
     required this.repsCtrl,
     required this.weightCtrl,
   });
-
+ 
   @override
   State<_DialogXpPreview> createState() => _DialogXpPreviewState();
 }
-
+ 
 class _DialogXpPreviewState extends State<_DialogXpPreview> {
   @override
   void initState() {
@@ -507,9 +573,9 @@ class _DialogXpPreviewState extends State<_DialogXpPreview> {
     widget.repsCtrl.addListener(_u);
     widget.weightCtrl.addListener(_u);
   }
-
+ 
   void _u() => setState(() {});
-
+ 
   @override
   void dispose() {
     widget.setsCtrl.removeListener(_u);
@@ -517,14 +583,14 @@ class _DialogXpPreviewState extends State<_DialogXpPreview> {
     widget.weightCtrl.removeListener(_u);
     super.dispose();
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     final s = int.tryParse(widget.setsCtrl.text) ?? 0;
     final r = int.tryParse(widget.repsCtrl.text) ?? 0;
     final w = double.tryParse(widget.weightCtrl.text) ?? 0;
     final xp = ((s * r * w) / 10).floor();
-
+ 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -547,14 +613,14 @@ class _DialogXpPreviewState extends State<_DialogXpPreview> {
     );
   }
 }
-
+ 
 class _DialogField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final double min;
   final double max;
   final bool isDecimal;
-
+ 
   const _DialogField({
     required this.controller,
     required this.label,
@@ -562,7 +628,7 @@ class _DialogField extends StatelessWidget {
     required this.max,
     this.isDecimal = false,
   });
-
+ 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
@@ -581,3 +647,4 @@ class _DialogField extends StatelessWidget {
     );
   }
 }
+ 

@@ -99,8 +99,6 @@ class _PokedexScreenState extends State<PokedexScreen>
   }
 }
 
-// ── My Pokémon tab ────────────────────────────────────────────────────────────
-
 class _MyPokemonTab extends StatelessWidget {
   final Map<dynamic, dynamic> partners;
   final String activePartner;
@@ -194,8 +192,6 @@ class _MyPokemonTab extends StatelessWidget {
   }
 }
 
-// ── Pokémon Detail Screen ───────────────────────────────────────────────────
-
 class PokemonDetailScreen extends StatelessWidget {
   final String name;
   final Map<dynamic, dynamic> data;
@@ -237,7 +233,6 @@ class PokemonDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             
-            // Types Display
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: types.map((type) {
@@ -259,7 +254,6 @@ class PokemonDetailScreen extends StatelessWidget {
             
             const SizedBox(height: 32),
 
-            // Independent Partner XP bar
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -303,7 +297,6 @@ class PokemonDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 40),
 
-            // Set Active Button
             if (!isActive)
               SizedBox(
                 width: double.infinity,
@@ -354,7 +347,6 @@ class PokemonDetailScreen extends StatelessWidget {
   }
 }
 
-// ── Catalog tab ───────────────────────────────────────────────────────────────
 
 class _CatalogTab extends StatelessWidget {
   final Map<dynamic, dynamic> partners;
@@ -369,7 +361,6 @@ class _CatalogTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Automatically generates an alphabetical list from the database typings
     final List<String> catalogOrder = DatabaseHelper.pokemonTypes.keys.toList()..sort();
     final int totalCollected = partners.length;
     final int totalSlots = catalogOrder.length;

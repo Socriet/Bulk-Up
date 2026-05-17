@@ -41,7 +41,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final active = db.get('active_partner') as String? ?? '';
     final partners = Map<dynamic, dynamic>.from(db.get('partners') ?? {});
     
-    
     final workouts = List<dynamic>.from(db.get('workouts') ?? []);
     double vol = 0;
     for(var w in workouts) {
@@ -71,7 +70,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
- 
   int _getTrainerBaseXp(int level) {
     const thresholds = [0, 1000, 3000, 6000, 10000, 15000];
     if (level <= 6) return thresholds[level - 1];
@@ -91,14 +89,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: CircularProgressIndicator(color: Colors.greenAccent));
     }
 
-   
     final pLevel = _partnerData['level'] as int? ?? 1;
     final pExp = _partnerData['exp'] as int? ?? 0;
     final pNext = pLevel * 100;
     final pProgress = (pExp / pNext).clamp(0.0, 1.0);
     final pToNext = pNext - pExp;
 
-   
     final tBase = _getTrainerBaseXp(_level);
     final tNext = _getTrainerNextLevelXp(_level);
     final tCurrent = _totalXp - tBase;
@@ -111,7 +107,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          
           
           if (_activePartner.isNotEmpty) ...[
             Image.asset(
@@ -140,7 +135,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           
           const SizedBox(height: 24),
 
-         
           if (_activePartner.isNotEmpty) ...[
             Container(
               width: double.infinity,
@@ -186,7 +180,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 16),
           ],
             
-        
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -238,7 +231,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           const SizedBox(height: 20),
 
-     
           SizedBox(
             width: double.infinity,
             child: _StatBox(
